@@ -93,8 +93,17 @@ const RetroSpace = () => {
         }));
     }, []);
 
+    const spaceObjects = useMemo(() => [
+        { type: "planet", top: "15%", left: "10%", size: 45, color: "#ff4444", delay: 0, animType: "float" },
+        { type: "planet", top: "65%", left: "85%", size: 65, color: "#4444ff", delay: 2, animType: "float" },
+        { type: "planet", top: "45%", left: "75%", size: 25, color: "#aaa", delay: 1, animType: "pulse" },
+        { type: "craft", top: "40%", left: "-15%", size: 26, delay: 5, duration: 22 },
+        { type: "craft", top: "75%", left: "115%", size: 20, delay: 12, duration: 30 },
+        { type: "craft", top: "10%", left: "110%", size: 22, delay: 0, duration: 38 }
+    ], []);
+
     return (
-        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-black">
+        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden bg-black grayscale-[0.1]">
             {stars.map((star) => (
                 <div
                     key={star.id}
@@ -110,6 +119,37 @@ const RetroSpace = () => {
                         opacity: 0.5
                     }}
                 />
+            ))}
+            {spaceObjects.map((obj, i) => (
+                <motion.div
+                    key={i}
+                    animate={
+                        obj.type === "craft"
+                            ? { x: obj.left.startsWith("-") ? "130vw" : "-130vw", y: [0, -15, 15, 0] }
+                            : obj.animType === "float"
+                                ? { y: [0, -40, 0], x: [0, 20, 0], rotate: [0, 10, -10, 0] }
+                                : { opacity: [0.3, 0.6, 0.3], scale: [1, 1.2, 1] }
+                    }
+                    transition={{
+                        duration: obj.duration || (obj.type === "planet" ? 12 : 10),
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: obj.delay
+                    }}
+                    className="absolute"
+                    style={{
+                        top: obj.top,
+                        left: obj.left,
+                        width: obj.size,
+                        height: obj.size,
+                    }}
+                >
+                    {obj.type === "planet" ? (
+                        <div className="rounded-full blur-[1px] opacity-40 shadow-[0_0_30px_rgba(255,255,255,0.1)]" style={{ backgroundColor: obj.color, width: '100%', height: '100%' }} />
+                    ) : (
+                        <Rocket className={`text-white/20 ${obj.left.startsWith("-") ? "-rotate-90" : "rotate-90"}`} size={obj.size} />
+                    )}
+                </motion.div>
             ))}
         </div>
     );
@@ -160,7 +200,19 @@ const Navbar = () => {
                     >
                         <div className="flex flex-col p-10 gap-8 items-center">
                             {navLinks.map((link) => (
-                                <a key={link.name} href={link.href} className="text-[12px] text-nes-white font-bold hover:text-nes-yellow nes-text tracking-widest" onClick={() => setMobileMenuOpen(false)}>
+                                <a
+                                    key={link.name}
+                                    href={link.href}
+                                    className="text-[12px] text-nes-white font-bold hover:text-nes-yellow nes-text tracking-widest"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const target = document.querySelector(link.href);
+                                        if (target) {
+                                            target.scrollIntoView({ behavior: 'smooth' });
+                                            setMobileMenuOpen(false);
+                                        }
+                                    }}
+                                >
                                     {link.name}
                                 </a>
                             ))}
@@ -472,67 +524,84 @@ const Research = () => (
 );
 
 // --- 6. ACHIEVEMENTS ---
-const Achievements = () => (
-    <section id="achievements" className="py-20 md:py-32 bg-nes-gray/20">
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
-            <div className="mb-16 md:mb-24 text-center">
-                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
-                    CHAPTER_06::ACHIEVEMENTS
-                </h2>
+const Achievements = () => {
+    const [selectedId, setSelectedId] = useState(null);
+    const achievements = [
+        { id: 1, type: "RESEARCH", title: "PUBLISHED_RESEARCH", text: "CO-AUTHORED: 'IMAGE PROCESSING AND ANALYSIS OF MULTIPLE WAVELENGTH ASTRONOMICAL DATA USING PYTHON TOOLS' (OCT 2024).", icon: <Award className="text-nes-yellow" size={28} />, img: "/research_preview.jpg" },
+        { id: 2, type: "HACKATHON", title: "HACKATHON_WIN", text: "ASTROCODE HACKATHON (WINNER – TEAM ASTROMANIAC).", icon: <Trophy className="text-nes-yellow" size={28} />, img: "/hackathon_preview.jpg" },
+        { id: 3, type: "DISCOVERY", title: "ASTEROID_DISCOVERY", text: "PROVISIONAL DISCOVERY OF MAIN BELT ASTEROID BY IASC/NASA.", icon: <Rocket className="text-nes-yellow" size={28} />, img: "/asteroid_preview.jpg" }
+    ];
+
+    return (
+        <section id="achievements" className="py-20 md:py-32 bg-nes-gray/20">
+            <div className="max-w-7xl mx-auto px-6 md:px-10">
+                <div className="mb-16 md:mb-24 text-center">
+                    <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                        CHAPTER_06::ACHIEVEMENTS
+                    </h2>
+                </div>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {achievements.map((item) => (
+                        <motion.div
+                            key={item.id}
+                            whileHover={{ y: -10 }}
+                            viewport={{ once: true }}
+                            onClick={() => setSelectedId(item.id)}
+                            className="nes-border border-white/20 p-8 md:p-10 bg-black flex flex-col gap-6 h-full cursor-pointer group active:scale-95 transition-all"
+                        >
+                            {item.icon}
+                            <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px] group-hover:text-nes-yellow">{item.title}</h4>
+                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
+                                {item.text}
+                            </p>
+                            <span className="mt-auto nes-text text-[6px] text-nes-yellow opacity-50">[CLICK_TO_PREVIEW]</span>
+                        </motion.div>
+                    ))}
+                </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
-                <motion.div
-                    whileHover={{ y: -10 }}
-                    viewport={{ once: true }}
-                    className="nes-border border-white/20 p-8 md:p-10 bg-black flex flex-col gap-6 h-full"
-                >
-                    <Award className="text-nes-yellow" size={28} />
-                    <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px]">PUBLISHED_RESEARCH</h4>
-                    <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
-                        CO-AUTHORED: "IMAGE ANALYSIS OF ASTRONOMICAL DATA" (OCT 2024).
-                    </p>
-                </motion.div>
-
-                <motion.div
-                    whileHover={{ y: -10 }}
-                    viewport={{ once: true }}
-                    className="nes-border border-white/20 p-8 md:p-10 bg-black flex flex-col gap-6 h-full"
-                >
-                    <Trophy className="text-nes-yellow" size={28} />
-                    <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px]">MATH_OLYMPIAD</h4>
-                    <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
-                        PARTICIPATION IN BANGLADESH MATHEMATICAL OLYMPIAD.
-                    </p>
-                </motion.div>
-
-                <motion.div
-                    whileHover={{ y: -10 }}
-                    viewport={{ once: true }}
-                    className="nes-border border-white/20 p-8 md:p-10 bg-black flex flex-col gap-6 h-full"
-                >
-                    <Trophy className="text-nes-yellow" size={28} />
-                    <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px]">HACKATHON_WIN</h4>
-                    <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
-                        ASTROCODE HACKATHON (WINNER – TEAM ASTROMANIAC).
-                    </p>
-                </motion.div>
-
-                <motion.div
-                    whileHover={{ y: -10 }}
-                    viewport={{ once: true }}
-                    className="nes-border border-white/20 p-8 md:p-10 bg-black flex flex-col gap-6 h-full"
-                >
-                    <Rocket className="text-nes-yellow" size={28} />
-                    <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px]">ASTEROID_DISCOVERY</h4>
-                    <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
-                        PROVISIONAL DISCOVERY OF MAIN BELT ASTEROID BY IASC/NASA.
-                    </p>
-                </motion.div>
-            </div>
-        </div>
-    </section>
-);
+            {/* PREVIEW MODAL */}
+            <AnimatePresence>
+                {selectedId && (
+                    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm" onClick={() => setSelectedId(null)}>
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="nes-border border-4 border-nes-yellow bg-black p-4 md:p-8 max-w-2xl w-full relative"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button className="absolute top-4 right-4 text-white nes-text text-[10px]" onClick={() => setSelectedId(null)}>[X]</button>
+                            <div className="bg-nes-gray/20 mb-6 border-2 border-white/10 max-h-[60vh] overflow-auto">
+                                <img
+                                    src={achievements.find(a => a.id === selectedId).img}
+                                    alt="PREVIEW"
+                                    className="w-full h-auto block pixelated"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
+                                <div className="hidden flex-col items-center gap-4 text-white/30 nes-text text-[7px] p-4 text-center">
+                                    <Cpu size={32} className="animate-pulse" />
+                                    SYSTEM_LOG: IMAGE_NOT_FOUND_IN_ASSETS<br />
+                                    NAME: {achievements.find(a => a.id === selectedId).img.replace('/', '')}
+                                </div>
+                            </div>
+                            <h3 className="nes-text text-[9px] md:text-[11px] text-nes-yellow mb-4">
+                                {achievements.find(a => a.id === selectedId).title}
+                            </h3>
+                            <p className="story-text text-[8px] md:text-[9px] leading-relaxed uppercase">
+                                {achievements.find(a => a.id === selectedId).text}
+                            </p>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </section>
+    );
+};
 
 // --- 7. OTHER ACTIVITIES ---
 const Activities = () => {
