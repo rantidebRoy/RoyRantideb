@@ -26,6 +26,57 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// --- Typewriter Hook ---
+const useTypewriter = (text, speed = 60, delay = 500) => {
+    const [displayed, setDisplayed] = useState('');
+    const [done, setDone] = useState(false);
+    useEffect(() => {
+        let i = 0;
+        setDisplayed('');
+        setDone(false);
+        const timer = setTimeout(() => {
+            const interval = setInterval(() => {
+                setDisplayed(text.slice(0, i + 1));
+                i++;
+                if (i >= text.length) { clearInterval(interval); setDone(true); }
+            }, speed);
+            return () => clearInterval(interval);
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [text, speed, delay]);
+    return { displayed, done };
+};
+
+// --- SVG Spacecraft ---
+const Spacecraft = ({ size = 40, flipped = false }) => (
+    <svg
+        width={size * 2.5}
+        height={size}
+        viewBox="0 0 100 40"
+        style={{ transform: flipped ? 'scaleX(-1)' : 'none', opacity: 0.25 }}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        {/* Main body */}
+        <ellipse cx="50" cy="20" rx="35" ry="10" fill="#aaa" />
+        {/* Cockpit */}
+        <ellipse cx="62" cy="18" rx="12" ry="7" fill="#888" />
+        <ellipse cx="64" cy="17" rx="7" ry="4" fill="#00ffff" opacity="0.3" />
+        {/* Wings */}
+        <polygon points="30,20 10,32 20,20" fill="#777" />
+        <polygon points="30,20 10,8 20,20" fill="#777" />
+        {/* Engine glow */}
+        <ellipse cx="15" cy="20" rx="6" ry="3" fill="#f3ef00" opacity="0.6" />
+        <ellipse cx="8" cy="20" rx="4" ry="2" fill="#ff8800" opacity="0.5" />
+        {/* Engine nozzle */}
+        <rect x="10" y="18" width="6" height="4" rx="1" fill="#555" />
+        {/* Hull detail */}
+        <line x1="35" y1="16" x2="55" y2="16" stroke="#666" strokeWidth="1" />
+        <line x1="35" y1="24" x2="55" y2="24" stroke="#666" strokeWidth="1" />
+        <circle cx="40" cy="20" r="2" fill="#f3ef00" opacity="0.4" />
+        <circle cx="48" cy="20" r="1.5" fill="#f3ef00" opacity="0.3" />
+    </svg>
+);
+
 // --- Assistant Robot Helper ---
 const AssistantRobot = () => {
     const [message, setMessage] = useState("GREETINGS_USER! I AM UNIT_RR-BOT. INITIALIZING...");
@@ -97,9 +148,9 @@ const RetroSpace = () => {
         { type: "planet", top: "15%", left: "10%", size: 45, color: "#ff4444", delay: 0, animType: "float" },
         { type: "planet", top: "65%", left: "85%", size: 65, color: "#4444ff", delay: 2, animType: "float" },
         { type: "planet", top: "45%", left: "75%", size: 25, color: "#aaa", delay: 1, animType: "pulse" },
-        { type: "craft", top: "40%", left: "-15%", size: 26, delay: 5, duration: 22 },
-        { type: "craft", top: "75%", left: "115%", size: 20, delay: 12, duration: 30 },
-        { type: "craft", top: "10%", left: "110%", size: 22, delay: 0, duration: 38 }
+        { type: "craft", top: "38%", left: "-18%", size: 28, delay: 5, duration: 22 },
+        { type: "craft", top: "72%", left: "118%", size: 22, delay: 12, duration: 30, flipped: true },
+        { type: "craft", top: "8%", left: "112%", size: 24, delay: 0, duration: 38, flipped: true }
     ], []);
 
     return (
@@ -125,7 +176,7 @@ const RetroSpace = () => {
                     key={i}
                     animate={
                         obj.type === "craft"
-                            ? { x: obj.left.startsWith("-") ? "130vw" : "-130vw", y: [0, -15, 15, 0] }
+                            ? { x: obj.left.startsWith("-") ? "140vw" : "-140vw", y: [0, -15, 15, 0] }
                             : obj.animType === "float"
                                 ? { y: [0, -40, 0], x: [0, 20, 0], rotate: [0, 10, -10, 0] }
                                 : { opacity: [0.3, 0.6, 0.3], scale: [1, 1.2, 1] }
@@ -140,14 +191,12 @@ const RetroSpace = () => {
                     style={{
                         top: obj.top,
                         left: obj.left,
-                        width: obj.size,
-                        height: obj.size,
                     }}
                 >
                     {obj.type === "planet" ? (
-                        <div className="rounded-full blur-[1px] opacity-40 shadow-[0_0_30px_rgba(255,255,255,0.1)]" style={{ backgroundColor: obj.color, width: '100%', height: '100%' }} />
+                        <div className="rounded-full blur-[1px] opacity-40 shadow-[0_0_30px_rgba(255,255,255,0.1)]" style={{ backgroundColor: obj.color, width: obj.size, height: obj.size }} />
                     ) : (
-                        <Rocket className={`text-white/20 ${obj.left.startsWith("-") ? "-rotate-90" : "rotate-90"}`} size={obj.size} />
+                        <Spacecraft size={obj.size} flipped={!!obj.flipped} />
                     )}
                 </motion.div>
             ))}
@@ -237,75 +286,90 @@ const Navbar = () => {
 };
 
 // --- HERO SECTION ---
-const Hero = () => (
-    <section className="min-h-screen flex items-center pt-28 pb-16 md:pt-32 md:pb-24 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 md:px-10 flex flex-col lg:grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="lg:col-span-8 space-y-8 md:space-y-12 order-2 lg:order-1"
-            >
-                <div className="inline-block px-4 py-1 border-2 border-nes-yellow text-[7px] md:text-[8px] text-nes-yellow nes-text break-words max-w-full">
-                    CHAPTER_00::SYSTEM_LOAD
-                </div>
-                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-relaxed md:leading-tight tracking-tight lg:tracking-tighter nes-text">
-                    LOADED <span className="text-nes-yellow">RANTIDEB ROY</span> <br />
-                    INTO THE <span className="md:inline">MAIN_FRAME</span>
-                </h1>
-                <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
-                    <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose">
-                        I HAVE AWAKENED IN THE DIGITAL VOID. I AM RANTIDEB ROY, A SYSTEMS ARCHITECT STUDYING COMPUTER SCIENCE AT SUST.
-                        MY MISSION IS TO OPTIMIZE THE WORLD THROUGH ELEGANT CODE MODULES AND SOLVE COMPLEX REAL-WORLD ENIGMAS.
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-4 md:gap-8 pt-4">
-                    <a href="#about" className="nes-btn group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
-                        INITIATE <ChevronRight size={12} className="group-hover:translate-x-1" />
-                    </a>
-                    <a href="#projects" className="nes-btn nes-border-white group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
-                        JUMP_TRIALS <Zap size={12} />
-                    </a>
-                </div>
-            </motion.div>
+const Hero = () => {
+    const line1 = 'LOADED ';
+    const name = 'RANTIDEB ROY';
+    const line2 = 'INTO THE MAIN_FRAME';
+    const full = line1 + name + ' ' + line2;
+    const { displayed, done } = useTypewriter(full, 55, 300);
 
-            <div className="lg:col-span-4 flex justify-center order-1 lg:order-2 w-full">
-                <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-nes-gray/20 flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel">
-                    <div className="absolute top-2 left-2 z-10 text-[5px] md:text-[6px] nes-text text-white bg-black/50 px-1">UNIT_ID: RR_EXT</div>
-                    <div className="absolute bottom-2 right-2 z-10 text-[5px] md:text-[6px] nes-text text-nes-yellow bg-black/50 px-1">VERSION: 4.0</div>
+    const namStart = line1.length;
+    const namEnd = namStart + name.length;
 
-                    {/* Image Layer */}
-                    <div className="w-full h-full relative group">
-                        <img
-                            src="/profile.jpg"
-                            alt="IDENTITY_SCAN"
-                            className="w-full h-full object-cover grayscale brightness-75 contrast-125 pixelated"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                            }}
-                        />
-                        {/* Fallback & Scanning Text */}
-                        <div className="hidden absolute inset-0 w-full h-full flex-col items-center justify-center text-center p-4 bg-black/40">
-                            <Rocket size={40} className="text-nes-yellow opacity-10 animate-pulse mb-4" />
-                            <p className="italic text-white/30 text-[6px] md:text-[8px] nes-text leading-tight md:leading-loose">
-                                ORBITAL_SCANNING_IN_PROGRESS...<br />
-                                <span className="text-[5px] md:text-[6px]">AWAITING_IMAGE_UPLOAD</span>
-                            </p>
-                        </div>
+    const before = displayed.slice(0, namStart);
+    const highlight = displayed.slice(namStart, Math.min(displayed.length, namEnd));
+    const after = displayed.length > namEnd ? displayed.slice(namEnd) : '';
 
-                        {/* CRT Effect on Image */}
-                        <div className="absolute inset-0 pointer-events-none border-2 border-nes-yellow/20"
-                            style={{ background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))', backgroundSize: '100% 2px, 3px 100%' }}>
-                        </div>
+    return (
+        <section className="min-h-screen flex items-center pt-28 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-6 md:px-10 flex flex-col lg:grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+                <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="lg:col-span-8 space-y-8 md:space-y-12 order-2 lg:order-1"
+                >
+                    <div className="inline-block px-4 py-1 border-2 border-nes-yellow text-[7px] md:text-[8px] text-nes-yellow nes-text break-words max-w-full">
+                        CHAPTER_00::SYSTEM_LOAD
                     </div>
+                    <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-relaxed md:leading-tight tracking-tight lg:tracking-tighter nes-text min-h-[4rem] md:min-h-[6rem]">
+                        {before}<span className="text-nes-yellow">{highlight}</span>{after.includes('INTO') ? <>{' '}<br />{after.trim()}</> : after}
+                        {!done && <span className="animate-pulse text-nes-yellow">_</span>}
+                    </h1>
+                    <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
+                        <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose">
+                            I HAVE AWAKENED IN THE DIGITAL VOID. I AM RANTIDEB ROY, A SYSTEMS ARCHITECT STUDYING COMPUTER SCIENCE AT SUST.
+                            MY MISSION IS TO OPTIMIZE THE WORLD THROUGH ELEGANT CODE MODULES AND SOLVE COMPLEX REAL-WORLD ENIGMAS.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-4 md:gap-8 pt-4">
+                        <a href="#about" className="nes-btn group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
+                            INITIATE <ChevronRight size={12} className="group-hover:translate-x-1" />
+                        </a>
+                        <a href="#projects" className="nes-btn nes-border-white group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
+                            JUMP_TRIALS <Zap size={12} />
+                        </a>
+                    </div>
+                </motion.div>
 
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-nes-white/50 animate-[scan-vertical_5s_linear_infinite] z-20" />
+                <div className="lg:col-span-4 flex justify-center order-1 lg:order-2 w-full">
+                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-nes-gray/20 flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel">
+                        <div className="absolute top-2 left-2 z-10 text-[5px] md:text-[6px] nes-text text-white bg-black/50 px-1">UNIT_ID: RR_EXT</div>
+                        <div className="absolute bottom-2 right-2 z-10 text-[5px] md:text-[6px] nes-text text-nes-yellow bg-black/50 px-1">VERSION: 4.0</div>
+
+                        {/* Image Layer */}
+                        <div className="w-full h-full relative group">
+                            <img
+                                src="/profile.jpg"
+                                alt="IDENTITY_SCAN"
+                                className="w-full h-full object-cover grayscale brightness-75 contrast-125 pixelated"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                            {/* Fallback & Scanning Text */}
+                            <div className="hidden absolute inset-0 w-full h-full flex-col items-center justify-center text-center p-4 bg-black/40">
+                                <Rocket size={40} className="text-nes-yellow opacity-10 animate-pulse mb-4" />
+                                <p className="italic text-white/30 text-[6px] md:text-[8px] nes-text leading-tight md:leading-loose">
+                                    ORBITAL_SCANNING_IN_PROGRESS...<br />
+                                    <span className="text-[5px] md:text-[6px]">AWAITING_IMAGE_UPLOAD</span>
+                                </p>
+                            </div>
+
+                            {/* CRT Effect on Image */}
+                            <div className="absolute inset-0 pointer-events-none border-2 border-nes-yellow/20"
+                                style={{ background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))', backgroundSize: '100% 2px, 3px 100%' }}>
+                            </div>
+                        </div>
+
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-nes-white/50 animate-[scan-vertical_5s_linear_infinite] z-20" />
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 // --- 1. ABOUT ME ---
 const About = () => (
@@ -457,31 +521,20 @@ const Education = () => (
                     </div>
 
                     <div className="space-y-10 md:space-y-12">
-                        {/* University */}
                         <div className="relative border-l-4 border-nes-yellow pl-6 md:pl-10">
                             <h4 className="nes-text text-[8px] md:text-[10px] text-white">BACHELOR OF ENGINEERING</h4>
                             <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">SUST, CSE</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">
-                                CURRENTLY IN 3RD YEAR.
-                            </div>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">CURRENTLY IN 3RD YEAR.</div>
                         </div>
-
-                        {/* College */}
                         <div className="relative border-l-4 border-white/20 pl-6 md:pl-10">
                             <h4 className="nes-text text-[8px] md:text-[10px] text-white">HIGHER SECONDARY (HSC)</h4>
                             <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">NOTRE DAME COLLEGE</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">
-                                RESULT: GPA 5.00
-                            </div>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">RESULT: GPA 5.00</div>
                         </div>
-
-                        {/* School */}
                         <div className="relative border-l-4 border-white/20 pl-6 md:pl-10">
                             <h4 className="nes-text text-[8px] md:text-[10px] text-white">SECONDARY SCHOOL (SSC)</h4>
                             <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">JUBILEE HIGH SCHOOL</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">
-                                RESULT: GPA 5.00
-                            </div>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">RESULT: GPA 5.00</div>
                         </div>
                     </div>
                 </motion.div>
@@ -513,9 +566,7 @@ const Research = () => (
                         viewport={{ once: true }}
                         className="nes-border border-nes-yellow/30 p-6 md:p-10 bg-black flex items-start gap-4 md:gap-8"
                     >
-                        <div className="text-nes-yellow mt-1">
-                            {res.icon}
-                        </div>
+                        <div className="text-nes-yellow mt-1">{res.icon}</div>
                         <div>
                             <h4 className="nes-text text-[8px] md:text-[9px] text-white mb-3 md:mb-4 tracking-[1px]">{res.title}</h4>
                             <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose opacity-70 uppercase">{res.desc}</p>
@@ -556,16 +607,13 @@ const Achievements = () => {
                         >
                             {item.icon}
                             <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px] group-hover:text-nes-yellow">{item.title}</h4>
-                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">
-                                {item.text}
-                            </p>
+                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">{item.text}</p>
                             <span className="mt-auto nes-text text-[6px] text-nes-yellow opacity-50">[CLICK_TO_PREVIEW]</span>
                         </motion.div>
                     ))}
                 </div>
             </div>
 
-            {/* PREVIEW MODAL */}
             <AnimatePresence>
                 {selectedId && (
                     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm" onClick={() => setSelectedId(null)}>
@@ -589,7 +637,7 @@ const Achievements = () => {
                                 />
                                 <div className="hidden flex-col items-center gap-4 text-white/30 nes-text text-[7px] p-4 text-center">
                                     <Cpu size={32} className="animate-pulse" />
-                                    SYSTEM_LOG: IMAGE_NOT_FOUND_IN_ASSETS<br />
+                                    SYSTEM_LOG: IMAGE_NOT_FOUND<br />
                                     NAME: {achievements.find(a => a.id === selectedId).img.replace('/', '')}
                                 </div>
                             </div>
@@ -640,9 +688,7 @@ const Activities = () => {
                             {activityLogs.map((log, i) => (
                                 <div key={i} className="flex gap-4 md:gap-6 items-start group">
                                     <div className="nes-text text-[8px] md:text-[10px] text-nes-yellow mt-1">{">>"}</div>
-                                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-loose uppercase tracking-tighter group-hover:text-nes-yellow transition-colors">
-                                        {log}
-                                    </p>
+                                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-loose uppercase tracking-tighter group-hover:text-nes-yellow transition-colors">{log}</p>
                                 </div>
                             ))}
                         </div>
@@ -654,61 +700,59 @@ const Activities = () => {
 };
 
 // --- 8. CONTACT ---
-const Contact = () => {
-    return (
-        <section id="contact" className="py-24 md:py-40">
-            <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
-                <div className="mb-16 md:mb-20 text-center">
-                    <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
-                        CHAPTER_08::UPLINK
-                    </h2>
+const Contact = () => (
+    <section id="contact" className="py-24 md:py-40">
+        <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
+            <div className="mb-16 md:mb-20 text-center">
+                <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                    CHAPTER_08::UPLINK
+                </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12 md:gap-16 text-left">
+                <div className="nes-border p-8 md:p-14 bg-black space-y-10 md:space-y-12 shadow-pixel border-nes-yellow">
+                    <div className="space-y-6 md:space-y-8">
+                        <div className="space-y-4 md:space-y-6">
+                            <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">OPERATOR_ID</label>
+                            <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="GUEST_NAME?" />
+                        </div>
+                        <div className="space-y-4 md:space-y-6">
+                            <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">UPLINK_FREQ</label>
+                            <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="EMAIL@VOID.NET" />
+                        </div>
+                    </div>
+                    <button className="nes-btn w-full mt-6 md:mt-10 text-[7px] md:text-[8px] font-bold py-4">TRANSMIT_DATA</button>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-12 md:gap-16 text-left">
-                    <div className="nes-border p-8 md:p-14 bg-black space-y-10 md:space-y-12 shadow-pixel border-nes-yellow">
-                        <div className="space-y-6 md:space-y-8">
-                            <div className="space-y-4 md:space-y-6">
-                                <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">OPERATOR_ID</label>
-                                <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="GUEST_NAME?" />
+                <div className="flex flex-col justify-center gap-10 md:gap-12 lg:pl-10">
+                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-[2] text-white border-l-4 border-nes-yellow pl-6 md:pl-10 italic mb-6 md:mb-10 uppercase">
+                        "SIGNAL IF YOU WANT TO COLLABORATE ON THE NEXT GREAT UPGRADE."
+                    </p>
+                    <div className="space-y-8 md:space-y-12">
+                        <div className="flex items-center gap-6 md:gap-8 group">
+                            <div className="p-3 md:p-4 border-4 border-nes-yellow text-nes-yellow transition-all group-hover:bg-nes-yellow group-hover:text-black bg-black">
+                                <Mail size={20} />
                             </div>
-                            <div className="space-y-4 md:space-y-6">
-                                <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">UPLINK_FREQ</label>
-                                <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="EMAIL@VOID.NET" />
+                            <div>
+                                <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">RADIO_ID</h4>
+                                <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight">rrantideb@gmail.com</p>
                             </div>
                         </div>
-                        <button className="nes-btn w-full mt-6 md:mt-10 text-[7px] md:text-[8px] font-bold py-4">TRANSMIT_DATA</button>
-                    </div>
-
-                    <div className="flex flex-col justify-center gap-10 md:gap-12 lg:pl-10">
-                        <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-[2] text-white border-l-4 border-nes-yellow pl-6 md:pl-10 italic mb-6 md:mb-10 uppercase">
-                            "SIGNAL IF YOU WANT TO COLLABORATE ON THE NEXT GREAT UPGRADE."
-                        </p>
-                        <div className="space-y-8 md:space-y-12">
-                            <div className="flex items-center gap-6 md:gap-8 group">
-                                <div className="p-3 md:p-4 border-4 border-nes-yellow text-nes-yellow transition-all group-hover:bg-nes-yellow group-hover:text-black bg-black">
-                                    <Mail size={20} />
-                                </div>
-                                <div>
-                                    <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">RADIO_ID</h4>
-                                    <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight">rrantideb@gmail.com</p>
-                                </div>
+                        <div className="flex items-center gap-6 md:gap-8 group">
+                            <div className="p-3 md:p-4 border-4 border-white text-white transition-all group-hover:bg-white group-hover:text-black bg-black">
+                                <Linkedin size={20} />
                             </div>
-                            <div className="flex items-center gap-6 md:gap-8 group">
-                                <div className="p-3 md:p-4 border-4 border-white text-white transition-all group-hover:bg-white group-hover:text-black bg-black">
-                                    <Linkedin size={20} />
-                                </div>
-                                <div>
-                                    <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">NEURAL_BRIDGE</h4>
-                                    <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight uppercase">RANTIDEB-ROY</p>
-                                </div>
+                            <div>
+                                <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">NEURAL_BRIDGE</h4>
+                                <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight uppercase">RANTIDEB-ROY</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
-    );
-};
+        </div>
+    </section>
+);
 
 // --- Footer ---
 const Footer = () => (
