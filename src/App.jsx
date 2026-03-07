@@ -193,8 +193,8 @@ const Hero = () => (
                 <div className="inline-block px-4 py-1 border-2 border-nes-yellow text-[7px] md:text-[8px] text-nes-yellow nes-text break-words max-w-full">
                     CHAPTER_00::SYSTEM_LOAD
                 </div>
-                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tight lg:tracking-tighter nes-text">
-                    LOADED <span className="text-nes-yellow">RANTIDEB ROY</span> <br className="hidden sm:block" />
+                <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-relaxed md:leading-tight tracking-tight lg:tracking-tighter nes-text">
+                    LOADED <span className="text-nes-yellow">RANTIDEB ROY</span> <br />
                     INTO THE <span className="md:inline">MAIN_FRAME</span>
                 </h1>
                 <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
@@ -255,8 +255,8 @@ const Hero = () => (
 const About = () => (
     <section id="about" className="py-20 md:py-32 relative">
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-            <div className="mb-12 md:mb-20 text-center">
-                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[6px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase">
+            <div className="mb-16 md:mb-24 text-center">
+                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
                     CHAPTER_01::ABOUT_ME
                 </h2>
             </div>
@@ -298,9 +298,11 @@ const Skills = () => {
     return (
         <section id="skills" className="py-20 md:py-32 bg-nes-gray/20">
             <div className="max-w-7xl mx-auto px-6 md:px-10">
-                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] text-center mb-16 md:mb-24 text-nes-yellow nes-text uppercase">
-                    CHAPTER_02::SKILL_MATRIX
-                </h2>
+                <div className="mb-16 md:mb-24 text-center">
+                    <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                        CHAPTER_02::SKILL_MATRIX
+                    </h2>
+                </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {data.map((item, idx) => (
@@ -342,11 +344,13 @@ const Projects = () => {
     return (
         <section id="projects" className="py-20 md:py-32">
             <div className="max-w-7xl mx-auto px-6 md:px-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 border-b-6 border-nes-white pb-6 gap-6">
-                    <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[4px] text-white nes-text uppercase">
+                <div className="mb-16 md:mb-24 text-center">
+                    <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
                         CHAPTER_03::PROJECTS
                     </h2>
-                    <span className="nes-text text-[8px] md:text-[10px] text-nes-yellow animate-pulse">TRIALS: 05_ACTIVE</span>
+                    <div className="mt-6">
+                        <span className="nes-text text-[8px] md:text-[10px] text-nes-yellow animate-pulse">TRIALS: 05_ACTIVE</span>
+                    </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -378,9 +382,11 @@ const Projects = () => {
 const Education = () => (
     <section id="education" className="py-20 md:py-32 bg-nes-gray/20">
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-            <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] text-center mb-16 md:mb-24 text-nes-yellow nes-text uppercase">
-                CHAPTER_04::ACADEMICS
-            </h2>
+            <div className="mb-16 md:mb-24 text-center">
+                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                    CHAPTER_04::ACADEMICS
+                </h2>
+            </div>
 
             <div className="grid lg:grid-cols-1 gap-10">
                 <motion.div
@@ -432,9 +438,11 @@ const Education = () => (
 const Research = () => (
     <section id="research" className="py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-            <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] text-center mb-16 md:mb-24 text-nes-yellow nes-text uppercase">
-                CHAPTER_05::RESEARCH
-            </h2>
+            <div className="mb-16 md:mb-24 text-center">
+                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                    CHAPTER_05::RESEARCH
+                </h2>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                 {[
@@ -467,9 +475,11 @@ const Research = () => (
 const Achievements = () => (
     <section id="achievements" className="py-20 md:py-32 bg-nes-gray/20">
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-            <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] text-center mb-16 md:mb-24 text-nes-yellow nes-text uppercase">
-                CHAPTER_06::ACHIEVEMENTS
-            </h2>
+            <div className="mb-16 md:mb-24 text-center">
+                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                    CHAPTER_06::ACHIEVEMENTS
+                </h2>
+            </div>
 
             <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
                 <motion.div
@@ -536,9 +546,11 @@ const Activities = () => {
     return (
         <section id="activities" className="py-20 md:py-32">
             <div className="max-w-7xl mx-auto px-6 md:px-10">
-                <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] text-center mb-16 md:mb-24 text-nes-yellow nes-text uppercase">
-                    CHAPTER_07::ACTIVITIES
-                </h2>
+                <div className="mb-16 md:mb-24 text-center">
+                    <h2 className="text-[10px] md:text-xl font-bold tracking-tight md:tracking-[8px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                        CHAPTER_07::ACTIVITIES
+                    </h2>
+                </div>
 
                 <div className="grid lg:grid-cols-1 gap-10">
                     <motion.div
@@ -573,9 +585,11 @@ const Contact = () => {
     return (
         <section id="contact" className="py-24 md:py-40">
             <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
-                <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] uppercase mb-16 md:mb-20 nes-text text-nes-yellow">
-                    CHAPTER_08::UPLINK
-                </h2>
+                <div className="mb-16 md:mb-20 text-center">
+                    <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                        CHAPTER_08::UPLINK
+                    </h2>
+                </div>
 
                 <div className="grid md:grid-cols-2 gap-12 md:gap-16 text-left">
                     <div className="nes-border p-8 md:p-14 bg-black space-y-10 md:space-y-12 shadow-pixel border-nes-yellow">
