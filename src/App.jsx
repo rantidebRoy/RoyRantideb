@@ -206,11 +206,15 @@ const Navbar = () => {
                                     className="text-[12px] text-nes-white font-bold hover:text-nes-yellow nes-text tracking-widest"
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        const target = document.querySelector(link.href);
-                                        if (target) {
-                                            target.scrollIntoView({ behavior: 'smooth' });
-                                            setMobileMenuOpen(false);
-                                        }
+                                        setMobileMenuOpen(false);
+                                        setTimeout(() => {
+                                            const target = document.querySelector(link.href);
+                                            if (target) {
+                                                const navbarHeight = 72;
+                                                const top = target.getBoundingClientRect().top + window.scrollY - navbarHeight;
+                                                window.scrollTo({ top, behavior: 'smooth' });
+                                            }
+                                        }, 350);
                                     }}
                                 >
                                     {link.name}
