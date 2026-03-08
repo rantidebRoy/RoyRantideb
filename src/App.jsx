@@ -26,24 +26,81 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// --- Typewriter Sound (Web Audio API) ---
+// Audio is only unlocked after an explicit user gesture (browser autoplay policy).
+// We use a Promise so any code can await the unlock.
+let _audioCtx = null;
+let _audioUnlockResolve = null;
+const audioUnlocked = new Promise(resolve => { _audioUnlockResolve = resolve; });
+
+const unlockAudio = () => {
+    if (_audioCtx) return; // already done
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _audioCtx.resume().then(() => _audioUnlockResolve(_audioCtx));
+};
+
+const playTypeClick = () => {
+    try {
+        if (!_audioCtx || _audioCtx.state !== 'running') return;
+        const ctx = _audioCtx;
+
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.4, ctx.currentTime);
+        masterGain.connect(ctx.destination);
+
+        // White noise burst — mechanical key contact
+        const bufSize = Math.floor(ctx.sampleRate * 0.04);
+        const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let n = 0; n < bufSize; n++) data[n] = Math.random() * 2 - 1;
+        const noiseSource = ctx.createBufferSource();
+        noiseSource.buffer = buffer;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.value = 2200;
+        noiseFilter.Q.value = 1.0;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(1, ctx.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+        noiseSource.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(masterGain);
+        noiseSource.start();
+        noiseSource.stop(ctx.currentTime + 0.04);
+
+        // Tonal thud — key body resonance
+        const osc = ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(480, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.03);
+        const oscGain = ctx.createGain();
+        oscGain.gain.setValueAtTime(0.7, ctx.currentTime);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        osc.connect(oscGain);
+        oscGain.connect(masterGain);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.03);
+    } catch (_) { /* silently ignore */ }
+};
+
 // --- Typewriter Hook ---
-const useTypewriter = (text, speed = 60, delay = 500) => {
+// `active` must be true before typing begins — caller controls this.
+const useTypewriter = (text, speed = 60, active = false, silent = false) => {
     const [displayed, setDisplayed] = useState('');
     const [done, setDone] = useState(false);
     useEffect(() => {
+        if (!active) return;
         let i = 0;
         setDisplayed('');
         setDone(false);
-        const timer = setTimeout(() => {
-            const interval = setInterval(() => {
-                setDisplayed(text.slice(0, i + 1));
-                i++;
-                if (i >= text.length) { clearInterval(interval); setDone(true); }
-            }, speed);
-            return () => clearInterval(interval);
-        }, delay);
-        return () => clearTimeout(timer);
-    }, [text, speed, delay]);
+        const interval = setInterval(() => {
+            setDisplayed(text.slice(0, i + 1));
+            if (!silent) playTypeClick();
+            i++;
+            if (i >= text.length) { clearInterval(interval); setDone(true); }
+        }, speed);
+        return () => clearInterval(interval);
+    }, [text, speed, active, silent]);
     return { displayed, done };
 };
 
@@ -78,17 +135,21 @@ const Spacecraft = ({ size = 40, flipped = false }) => (
 );
 
 // --- Assistant Robot Helper ---
-const AssistantRobot = () => {
-    const [message, setMessage] = useState("GREETINGS_USER! I AM UNIT_RR-BOT. INITIALIZING...");
-    const [isVisible, setIsVisible] = useState(true);
+const AssistantRobot = ({ started, onStart }) => {
+    const [message, setMessage] = useState(null);
+    const [bubbleVisible, setBubbleVisible] = useState(true);
 
     useEffect(() => {
+        if (!started) {
+            setMessage(null); // use the start prompt
+            return;
+        }
+        setMessage("SEQUENCE_INITIALIZED! SCROLLING_ENABLED.");
         const handleScroll = () => {
             const scrollPos = window.scrollY;
             const height = document.documentElement.scrollHeight - window.innerHeight;
             const progress = scrollPos / height;
-
-            if (progress < 0.1) setMessage("GREETINGS_USER! I AM UNIT_RR-BOT. INITIALIZING...");
+            if (progress < 0.1) setMessage("UNIT_RR-BOT_ONLINE. READING_BIO_DATA...");
             else if (progress < 0.15) setMessage("STAGE_01: ANALYZING_ID_LOGS...");
             else if (progress < 0.28) setMessage("STAGE_02: SCANNING_ARSENAL...");
             else if (progress < 0.42) setMessage("STAGE_03: ACCESSING_RECORDS...");
@@ -98,35 +159,111 @@ const AssistantRobot = () => {
             else if (progress < 0.94) setMessage("STAGE_07: EXTRACURRICULAR_LOGS...");
             else setMessage("STAGE_08: ESTABLISHING_SIGNAL...");
         };
-
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [started]);
 
     return (
-        <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[2000] flex flex-col items-end pointer-events-none">
+        <>
+            {/* ── FULL-SCREEN INTRO PROMPT (before start) ── */}
             <AnimatePresence>
-                {isVisible && (
+                {!started && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5, y: 50 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.5, y: 50 }}
-                        className="speech-bubble mb-6 md:mb-10 text-[7px] md:text-[8px] pointer-events-auto"
+                        key="intro-prompt"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, transition: { duration: 0.6 } }}
+                        className="fixed inset-0 z-[3000] flex flex-col items-center justify-center bg-black pointer-events-auto"
                     >
-                        {message}
+                        {/* Scanline overlay */}
+                        <div className="absolute inset-0 pointer-events-none"
+                            style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)' }}
+                        />
+
+                        {/* Robot figure */}
+                        <motion.div
+                            animate={{ y: [0, -10, 0] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                            className="robot-frame flex justify-around p-2 mb-10"
+                            style={{ width: 90, height: 90, borderColor: '#f3ef00', borderWidth: 4 }}
+                        >
+                            <div className="robot-eye left-3" />
+                            <div className="robot-eye right-3" />
+                            <div className="absolute bottom-2 w-1/2 h-1 bg-nes-yellow opacity-40" />
+                        </motion.div>
+
+                        {/* Dialog box */}
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.3, duration: 0.4 }}
+                            className="nes-border border-4 border-nes-yellow bg-black p-8 md:p-12 max-w-sm w-[90vw] flex flex-col gap-6"
+                        >
+                            <p className="nes-text text-nes-yellow text-[8px] md:text-[10px] leading-loose tracking-wider">
+                                &gt; UNIT_RR-BOT :: ONLINE<br />
+                                &gt; SYSTEM :: READY<br />
+                                &gt; MISSION :: PORTFOLIO_LOAD
+                            </p>
+                            <div className="border-t border-nes-yellow/30 pt-4">
+                                <p className="nes-text text-white text-[7px] md:text-[9px] leading-loose mb-6">
+                                    GREETINGS, VISITOR.<br />
+                                    SHALL I INITIALIZE<br />
+                                    THE JOURNEY?
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    <motion.button
+                                        id="bot-start-btn"
+                                        whileHover={{ scale: 1.03, backgroundColor: '#f3ef00', color: '#000' }}
+                                        whileTap={{ scale: 0.97 }}
+                                        className="w-full nes-btn text-[8px] md:text-[10px] py-3 tracking-widest px-4"
+                                        onClick={onStart}
+                                    >
+                                        ▶ YES — BEGIN
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ opacity: 0.8 }}
+                                        className="w-full border-2 border-white/20 text-white/30 nes-text text-[6px] py-2 tracking-widest bg-transparent"
+                                        onClick={() => window.history.back()}
+                                    >
+                                        ✕ NO — EXIT
+                                    </motion.button>
+                                </div>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-            <motion.div
-                className="robot-frame flex justify-around p-2 cursor-pointer scale-75 md:scale-100 pointer-events-auto"
-                whileHover={{ scale: 1.1 }}
-                onClick={() => setIsVisible(!isVisible)}
-            >
-                <div className="robot-eye left-3" />
-                <div className="robot-eye right-3" />
-                <div className="absolute bottom-2 w-1/2 h-1 bg-white opacity-20" />
-            </motion.div>
-        </div>
+
+            {/* ── BOTTOM-RIGHT HELPER (after start) ── */}
+            {started && (
+                <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[2000] flex flex-col items-end pointer-events-none">
+                    <AnimatePresence>
+                        {bubbleVisible && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                                className="speech-bubble mb-6 md:mb-10 text-[7px] md:text-[8px] pointer-events-auto"
+                            >
+                                {message || 'UNIT_RR-BOT_ONLINE. READING_BIO_DATA...'}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.5, type: 'spring' }}
+                        className="robot-frame flex justify-around p-2 cursor-pointer scale-75 md:scale-100 pointer-events-auto"
+                        whileHover={{ scale: 1.1 }}
+                        onClick={() => setBubbleVisible(v => !v)}
+                    >
+                        <div className="robot-eye left-3" />
+                        <div className="robot-eye right-3" />
+                        <div className="absolute bottom-2 w-1/2 h-1 bg-white opacity-20" />
+                    </motion.div>
+                </div>
+            )}
+        </>
     );
 };
 
@@ -286,19 +423,29 @@ const Navbar = () => {
 };
 
 // --- HERO SECTION ---
-const Hero = () => {
-    const line1 = 'LOADED ';
-    const name = 'RANTIDEB ROY';
-    const line2 = 'INTO THE MAIN_FRAME';
-    const full = line1 + name + ' ' + line2;
-    const { displayed, done } = useTypewriter(full, 55, 300);
+const Hero = ({ started, onDone }) => {
+    const titleLine1 = 'LOADED ';
+    const titleName = 'RANTIDEB ROY';
+    const titleLine2 = 'INTO THE MAIN_FRAME';
+    const fullTitle = titleLine1 + titleName + ' ' + titleLine2;
 
-    const namStart = line1.length;
-    const namEnd = namStart + name.length;
+    const bioText = "INITIALIZING_ID... I AM RANTIDEB ROY, AN UNDERGRADUATE NAVIGATOR AT SUST. CURRENTLY CRAFTING DIGITAL REALMS THROUGH REAL-TIME DEVELOPMENT, I AM GATHERING SYSTEM_RESOURCES TO UNLOCK THE MACHINE_LEARNING SUB-SECTORS. CALIBRATING NEURAL PATHWAYS FOR THE NEXT STAGE.";
 
-    const before = displayed.slice(0, namStart);
-    const highlight = displayed.slice(namStart, Math.min(displayed.length, namEnd));
-    const after = displayed.length > namEnd ? displayed.slice(namEnd) : '';
+    const titleTyping = useTypewriter(fullTitle, 90, started);
+    const bioTyping = useTypewriter(bioText, 25, titleTyping.done, true); // Silent, starts after title done
+
+    useEffect(() => {
+        if (bioTyping.done && onDone) {
+            onDone();
+        }
+    }, [bioTyping.done, onDone]);
+
+    const namStart = titleLine1.length;
+    const namEnd = namStart + titleName.length;
+
+    const before = titleTyping.displayed.slice(0, namStart);
+    const highlight = titleTyping.displayed.slice(namStart, Math.min(titleTyping.displayed.length, namEnd));
+    const after = titleTyping.displayed.length > namEnd ? titleTyping.displayed.slice(namEnd) : '';
 
     return (
         <section className="min-h-screen flex items-center pt-28 pb-16 md:pt-32 md:pb-24 overflow-hidden">
@@ -309,62 +456,82 @@ const Hero = () => {
                     transition={{ duration: 0.6 }}
                     className="lg:col-span-8 space-y-8 md:space-y-12 order-2 lg:order-1"
                 >
-                    <div className="inline-block px-4 py-1 border-2 border-nes-yellow text-[7px] md:text-[8px] text-nes-yellow nes-text break-words max-w-full">
-                        CHAPTER_00::SYSTEM_LOAD
-                    </div>
+                    <AnimatePresence>
+                        {titleTyping.done && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="inline-block px-4 py-1 border-2 border-nes-yellow text-[7px] md:text-[8px] text-nes-yellow nes-text break-words max-w-full"
+                            >
+                                CHAPTER_00::SYSTEM_LOAD
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-relaxed md:leading-tight tracking-tight lg:tracking-tighter nes-text min-h-[4rem] md:min-h-[6rem]">
                         {before}<span className="text-nes-yellow">{highlight}</span>{after.includes('INTO') ? <>{' '}<br />{after.trim()}</> : after}
-                        {!done && <span className="animate-pulse text-nes-yellow">_</span>}
+                        {!titleTyping.done && <span className="animate-pulse text-nes-yellow">_</span>}
                     </h1>
-                    <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
-                        <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose">
-                            I HAVE AWAKENED IN THE DIGITAL VOID. I AM RANTIDEB ROY, A SYSTEMS ARCHITECT STUDYING COMPUTER SCIENCE AT SUST.
-                            MY MISSION IS TO OPTIMIZE THE WORLD THROUGH ELEGANT CODE MODULES AND SOLVE COMPLEX REAL-WORLD ENIGMAS.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-4 md:gap-8 pt-4">
-                        <a href="#about" className="nes-btn group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
-                            INITIATE <ChevronRight size={12} className="group-hover:translate-x-1" />
-                        </a>
-                        <a href="#projects" className="nes-btn nes-border-white group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
-                            JUMP_TRIALS <Zap size={12} />
-                        </a>
-                    </div>
+
+                    <AnimatePresence>
+                        {titleTyping.done && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="space-y-8 md:space-y-12"
+                            >
+                                <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
+                                    <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose min-h-[4rem]">
+                                        {bioTyping.displayed}
+                                        {!bioTyping.done && <span className="animate-pulse text-nes-yellow">_</span>}
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-4 md:gap-8 pt-4">
+                                    <a href="#about" className="nes-btn group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
+                                        INITIATE <ChevronRight size={12} className="group-hover:translate-x-1" />
+                                    </a>
+                                    <a href="#projects" className="nes-btn nes-border-white group flex items-center gap-3 md:gap-4 text-[7px] md:text-[8px] flex-1 sm:flex-none justify-center">
+                                        JUMP_TRIALS <Zap size={12} />
+                                    </a>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 <div className="lg:col-span-4 flex justify-center order-1 lg:order-2 w-full">
-                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-nes-gray/20 flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel">
-                        <div className="absolute top-2 left-2 z-10 text-[5px] md:text-[6px] nes-text text-white bg-black/50 px-1">UNIT_ID: RR_EXT</div>
-                        <div className="absolute bottom-2 right-2 z-10 text-[5px] md:text-[6px] nes-text text-nes-yellow bg-black/50 px-1">VERSION: 4.0</div>
+                    <AnimatePresence>
+                        {titleTyping.done && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-nes-gray/20 flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel"
+                            >
+                                <div className="absolute top-2 left-2 z-10 text-[5px] md:text-[6px] nes-text text-white bg-black/50 px-1">UNIT_ID: RR_EXT</div>
+                                <div className="absolute bottom-2 right-2 z-10 text-[5px] md:text-[6px] nes-text text-nes-yellow bg-black/50 px-1">VERSION: 4.0</div>
 
-                        {/* Image Layer */}
-                        <div className="w-full h-full relative group">
-                            <img
-                                src="/profile.jpg"
-                                alt="IDENTITY_SCAN"
-                                className="w-full h-full object-cover grayscale brightness-75 contrast-125 pixelated"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
-                                }}
-                            />
-                            {/* Fallback & Scanning Text */}
-                            <div className="hidden absolute inset-0 w-full h-full flex-col items-center justify-center text-center p-4 bg-black/40">
-                                <Rocket size={40} className="text-nes-yellow opacity-10 animate-pulse mb-4" />
-                                <p className="italic text-white/30 text-[6px] md:text-[8px] nes-text leading-tight md:leading-loose">
-                                    ORBITAL_SCANNING_IN_PROGRESS...<br />
-                                    <span className="text-[5px] md:text-[6px]">AWAITING_IMAGE_UPLOAD</span>
-                                </p>
-                            </div>
-
-                            {/* CRT Effect on Image */}
-                            <div className="absolute inset-0 pointer-events-none border-2 border-nes-yellow/20"
-                                style={{ background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))', backgroundSize: '100% 2px, 3px 100%' }}>
-                            </div>
-                        </div>
-
-                        <div className="absolute top-0 left-0 w-full h-[2px] bg-nes-white/50 animate-[scan-vertical_5s_linear_infinite] z-20" />
-                    </div>
+                                <div className="w-full h-full relative group">
+                                    <img
+                                        src="/profile.jpg"
+                                        alt="IDENTITY_SCAN"
+                                        className="w-full h-full object-cover grayscale brightness-75 contrast-125 pixelated"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                    />
+                                    <div className="hidden absolute inset-0 w-full h-full flex-col items-center justify-center text-center p-4 bg-black/40">
+                                        <Rocket size={40} className="text-nes-yellow opacity-10 animate-pulse mb-4" />
+                                        <p className="italic text-white/30 text-[6px] md:text-[8px] nes-text leading-tight md:leading-loose">
+                                            ORBITAL_SCANNING_IN_PROGRESS...<br />
+                                            <span className="text-[5px] md:text-[6px]">AWAITING_IMAGE_UPLOAD</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </section>
@@ -393,12 +560,11 @@ const About = () => (
                         <span className="nes-text text-[5px] md:text-[6px] text-white/40">STATUS: ACTIVE</span>
                     </div>
                     <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-[2] text-[#fff]">
-                        I AM AN UNDERGRADUATE STUDENT IN COMPUTER SCIENCE AND ENGINEERING AT SHAHJALAL UNIVERSITY OF SCIENCE AND TECHNOLOGY (SUST), BANGLADESH.
-                        I AM A PASSIONATE DEVELOPER AND RESEARCHER COMMITTED TO MASTERING MACHINE LEARNING, SOFTWARE ENGINEERING, AND SCIENTIFIC PROGRAMMING.
-                        I SPEND MY DAYS BUILDING EFFICIENT SOFTWARE SOLUTIONS AND EXPLORING WHERE DATA SCIENCE MEETS THE STARS.
+                        I AM CURRENTLY A 3RD-YEAR UNDERGRADUATE STUDENT PURSUING A BACHELOR OF SCIENCE IN COMPUTER SCIENCE AND ENGINEERING AT SHAHJALAL UNIVERSITY OF SCIENCE AND TECHNOLOGY (SUST), BANGLADESH. MY ACADEMIC FOUNDATION IS BUILT ON A RIGOROUS STUDY OF <span className="text-nes-yellow font-bold">DATA STRUCTURES (DSA)</span>, <span className="text-nes-yellow font-bold">ALGORITHMS</span>, AND <span className="text-nes-yellow font-bold">OBJECT-ORIENTED PROGRAMMING (OOP)</span> PRINCIPLES.
+                        BEYOND THE CORE CURRICULUM, I HAVE EXTENSIVE EXPERIENCE IN DEVELOPING MODERN APPLICATIONS USING VARIOUS <span className="text-nes-yellow font-bold">WEB TECHNOLOGIES</span> AND AM ACTIVELY INTEGRATING <span className="text-nes-yellow font-bold">DATA SCIENCE</span> METHODOLOGIES INTO MY WORKFLOW. MY PROFESSIONAL FOCUS LIES IN LEVERAGING THESE ANALYTICAL TOOLS TO BUILD SCALABLE, DATA-DRIVEN SOLUTIONS WHILE CONTINUOUSLY EVOLVING MY EXPERTISE IN EMERGING COMPUTATIONAL FIELDS.
                     </p>
                     <p className="story-text text-[7px] md:text-[8px] italic text-nes-yellow font-bold uppercase">
-                        "MISSION: RE-ENGINEERING DIGITAL ARCHITECTURE FOR MAXIMUM OPTIMIZATION."
+                        "OBJECTIVE: BRIDGING TRADITIONAL ENGINEERING WITH THE FRONTIERS OF DATA DRIVEN INNOVATION."
                     </p>
                 </motion.div>
             </div>
@@ -457,8 +623,7 @@ const Projects = () => {
         { name: "STUDY_BUDDY", desc: "ANDROID APPLICATION DESIGNED TO ENHANCE STUDENT PRODUCTIVITY AND ACADEMIC MANAGEMENT.", tag: "KOTLIN", link: "https://github.com/rantidebRoy/StudyBuddy" },
         { name: "COURSE_MGMT", desc: "JAVA SERVLET-BASED WEB APPLICATION FOR MANAGING ACADEMIC COURSES AND REGISTRATIONS.", tag: "JAVA", link: "https://github.com/rantidebRoy/Course_Management_System" },
         { name: "BREAK_BRICKS", desc: "CLASSIC ARCADE GAME IMPLEMENTED IN C++, SHOWCASING GAME LOGIC AND GRAPHICS.", tag: "C++", link: "https://github.com/rantidebRoy/BreakBreaker" },
-        { name: "LEARN_MGMT", desc: "ROBUST PLATFORM FOR HANDLING EDUCATIONAL CONTENT AND MONITORING USER PROGRESS.", tag: "REACT", link: "https://github.com/rantidebRoy/LearningManagementSystem" },
-        { name: "LIB_MGMT", desc: "JAVA-BASED SYSTEM FOR AUTOMATING LIBRARY OPERATIONS AND MEMBER TRACKING.", tag: "JAVA", link: "https://github.com/rantidebRoy/LibraryManagementSystem" }
+        { name: "LEARN_MGMT", desc: "ROBUST PLATFORM FOR HANDLING EDUCATIONAL CONTENT AND MONITORING USER PROGRESS.", tag: "REACT", link: "https://github.com/rantidebRoy/LearningManagementSystem" }
     ];
 
     return (
@@ -469,7 +634,7 @@ const Projects = () => {
                         CHAPTER_03::PROJECTS
                     </h2>
                     <div className="mt-6">
-                        <span className="nes-text text-[8px] md:text-[10px] text-nes-yellow animate-pulse">TRIALS: 05_ACTIVE</span>
+                        <span className="nes-text text-[8px] md:text-[10px] text-nes-yellow animate-pulse">TRIALS: 04_ACTIVE</span>
                     </div>
                 </div>
 
@@ -778,21 +943,57 @@ const Footer = () => (
 );
 
 function App() {
+    const [started, setStarted] = useState(false);
+    const [isHeroDone, setIsHeroDone] = useState(false);
+
+    const handleStart = () => {
+        unlockAudio(); // AudioContext created + resumed inside this click handler
+        setStarted(true);
+    };
+
     return (
-        <div className="min-h-screen bg-black selection:bg-nes-yellow selection:text-black overflow-x-hidden relative text-white crt flicker">
+        <div className="min-h-screen bg-black selection:bg-nes-yellow selection:text-black overflow-x-hidden relative text-white">
+            {/* Always visible: starfield background */}
             <RetroSpace />
-            <AssistantRobot />
-            <Navbar />
-            <Hero />
-            <About />
-            <Skills />
-            <Projects />
-            <Education />
-            <Research />
-            <Achievements />
-            <Activities />
-            <Contact />
-            <Footer />
+
+            {/* Bot: shows intro prompt before start, helper after */}
+            <AssistantRobot started={started} onStart={handleStart} />
+
+            {/* Main site content — only mounts after user starts */}
+            <AnimatePresence>
+                {started && (
+                    <motion.div
+                        key="site"
+                        className="crt flicker"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.8 }}
+                    >
+                        <Navbar />
+                        <Hero started={started} onDone={() => setIsHeroDone(true)} />
+
+                        <AnimatePresence>
+                            {isHeroDone && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 50 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 1, ease: "easeOut" }}
+                                >
+                                    <About />
+                                    <Skills />
+                                    <Projects />
+                                    <Education />
+                                    <Research />
+                                    <Achievements />
+                                    <Activities />
+                                    <Contact />
+                                    <Footer />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
