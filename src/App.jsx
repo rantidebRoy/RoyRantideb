@@ -83,6 +83,57 @@ const playTypeClick = () => {
     } catch (_) { /* silently ignore */ }
 };
 
+const playMenuClick = () => {
+    try {
+        if (!_audioCtx || _audioCtx.state !== 'running') return;
+        const ctx = _audioCtx;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.2, ctx.currentTime);
+        masterGain.connect(ctx.destination);
+
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1200, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.05);
+
+        const oscGain = ctx.createGain();
+        oscGain.gain.setValueAtTime(0.4, ctx.currentTime);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+
+        osc.connect(oscGain);
+        oscGain.connect(masterGain);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+    } catch (_) { /* ignore */ }
+};
+
+const playStartSound = () => {
+    try {
+        if (!_audioCtx || _audioCtx.state !== 'running') return;
+        const ctx = _audioCtx;
+        const t = ctx.currentTime;
+
+        const playNote = (freq, start, duration) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, start);
+            g.gain.setValueAtTime(0.2, start);
+            g.gain.exponentialRampToValueAtTime(0.01, start + duration);
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + duration);
+        };
+
+        // Celebratory arpeggio: C5 -> E5 -> G5 -> C6
+        playNote(523.25, t, 0.1);      // C5
+        playNote(659.25, t + 0.08, 0.1); // E5
+        playNote(783.99, t + 0.16, 0.1); // G5
+        playNote(1046.50, t + 0.24, 0.3); // C6
+    } catch (_) { /* ignore */ }
+};
+
 // --- Typewriter Hook ---
 // `active` must be true before typing begins — caller controls this.
 const useTypewriter = (text, speed = 60, active = false, silent = false) => {
@@ -149,15 +200,15 @@ const AssistantRobot = ({ started, onStart }) => {
             const scrollPos = window.scrollY;
             const height = document.documentElement.scrollHeight - window.innerHeight;
             const progress = scrollPos / height;
-            if (progress < 0.1) setMessage("UNIT_RR-BOT_ONLINE. READING_BIO_DATA...");
-            else if (progress < 0.15) setMessage("STAGE_01: ANALYZING_ID_LOGS...");
-            else if (progress < 0.28) setMessage("STAGE_02: SCANNING_ARSENAL...");
-            else if (progress < 0.42) setMessage("STAGE_03: ACCESSING_RECORDS...");
-            else if (progress < 0.55) setMessage("STAGE_04: ACADEMIC_DATABASE...");
-            else if (progress < 0.68) setMessage("STAGE_05: RESEARCH_VECTORS...");
-            else if (progress < 0.81) setMessage("STAGE_06: ACHIEVEMENT_TRACKER...");
-            else if (progress < 0.94) setMessage("STAGE_07: EXTRACURRICULAR_LOGS...");
-            else setMessage("STAGE_08: ESTABLISHING_SIGNAL...");
+            if (progress < 0.1) setMessage("Unit_RR-Bot Online. Reading Bio Data...");
+            else if (progress < 0.15) setMessage("Stage_01: Analyzing ID Logs...");
+            else if (progress < 0.28) setMessage("Stage_02: Scanning Arsenal...");
+            else if (progress < 0.42) setMessage("Stage_03: Accessing Records...");
+            else if (progress < 0.55) setMessage("Stage_04: Academic Database...");
+            else if (progress < 0.68) setMessage("Stage_05: Research Vectors...");
+            else if (progress < 0.81) setMessage("Stage_06: Achievement Tracker...");
+            else if (progress < 0.94) setMessage("Stage_07: Extracurricular Logs...");
+            else setMessage("Stage_08: Establishing Signal...");
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
@@ -223,7 +274,7 @@ const AssistantRobot = ({ started, onStart }) => {
                                     <motion.button
                                         whileHover={{ opacity: 0.8 }}
                                         className="w-full border-2 border-white/20 text-white/30 nes-text text-[6px] py-2 tracking-widest bg-transparent"
-                                        onClick={() => window.history.back()}
+                                        onClick={() => { playMenuClick(); window.history.back(); }}
                                     >
                                         ✕ NO — EXIT
                                     </motion.button>
@@ -255,7 +306,7 @@ const AssistantRobot = ({ started, onStart }) => {
                         transition={{ delay: 0.5, type: 'spring' }}
                         className="robot-frame flex justify-around p-2 cursor-pointer scale-75 md:scale-100 pointer-events-auto"
                         whileHover={{ scale: 1.1 }}
-                        onClick={() => setBubbleVisible(v => !v)}
+                        onClick={() => { playMenuClick(); setBubbleVisible(v => !v); }}
                     >
                         <div className="robot-eye left-3" />
                         <div className="robot-eye right-3" />
@@ -363,7 +414,12 @@ const Navbar = () => {
                 </a>
                 <div className="hidden xl:flex gap-8 items-center">
                     {navLinks.map((link) => (
-                        <a key={link.name} href={link.href} className="text-[8px] text-white font-bold hover:text-nes-yellow transition-all nes-text">
+                        <a
+                            key={link.name}
+                            href={link.href}
+                            className="text-[8px] text-white font-bold hover:text-nes-yellow transition-all nes-text"
+                            onClick={() => playMenuClick()}
+                        >
                             {link.name}
                         </a>
                     ))}
@@ -371,7 +427,10 @@ const Navbar = () => {
                         <Github size={14} />
                     </a>
                 </div>
-                <button className="xl:hidden text-nes-yellow border-4 border-nes-yellow py-2 px-3 uppercase nes-text text-[8px] font-bold" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                <button
+                    className="xl:hidden text-nes-yellow border-4 border-nes-yellow py-2 px-3 uppercase nes-text text-[8px] font-bold"
+                    onClick={() => { playMenuClick(); setMobileMenuOpen(!mobileMenuOpen); }}
+                >
                     {mobileMenuOpen ? "BACK" : "SELECT"}
                 </button>
             </div>
@@ -391,6 +450,7 @@ const Navbar = () => {
                                     href={link.href}
                                     className="text-[12px] text-nes-white font-bold hover:text-nes-yellow nes-text tracking-widest"
                                     onClick={(e) => {
+                                        playMenuClick();
                                         e.preventDefault();
                                         setMobileMenuOpen(false);
                                         setTimeout(() => {
@@ -429,16 +489,17 @@ const Hero = ({ started, onDone }) => {
     const titleLine2 = 'INTO THE MAIN_FRAME';
     const fullTitle = titleLine1 + titleName + ' ' + titleLine2;
 
-    const bioText = "INITIALIZING_ID... I AM RANTIDEB ROY, AN UNDERGRADUATE NAVIGATOR AT SUST. CURRENTLY CRAFTING DIGITAL REALMS THROUGH REAL-TIME DEVELOPMENT, I AM GATHERING SYSTEM_RESOURCES TO UNLOCK THE MACHINE_LEARNING SUB-SECTORS. CALIBRATING NEURAL PATHWAYS FOR THE NEXT STAGE.";
+    const bioText = "Initializing ID... I am Rantideb Roy, an undergraduate navigator at SUST. Currently crafting digital realms through real-time development, I am gathering system_resources to unlock the machine_learning sub-sectors. Calibrating neural pathways for the next stage.";
 
     const titleTyping = useTypewriter(fullTitle, 90, started);
-    const bioTyping = useTypewriter(bioText, 25, titleTyping.done, true); // Silent, starts after title done
 
     useEffect(() => {
-        if (bioTyping.done && onDone) {
-            onDone();
+        if (titleTyping.done && onDone) {
+            // Short delay so the bio reveals before the rest of the page starts sliding in
+            const timer = setTimeout(onDone, 800);
+            return () => clearTimeout(timer);
         }
-    }, [bioTyping.done, onDone]);
+    }, [titleTyping.done, onDone]);
 
     const namStart = titleLine1.length;
     const namEnd = namStart + titleName.length;
@@ -481,9 +542,8 @@ const Hero = ({ started, onDone }) => {
                                 className="space-y-8 md:space-y-12"
                             >
                                 <div className="nes-border border-4 p-6 md:p-10 bg-black/60 shadow-pixel border-nes-yellow">
-                                    <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose min-h-[4rem]">
-                                        {bioTyping.displayed}
-                                        {!bioTyping.done && <span className="animate-pulse text-nes-yellow">_</span>}
+                                    <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-loose">
+                                        {bioText}
                                     </p>
                                 </div>
 
@@ -560,11 +620,11 @@ const About = () => (
                         <span className="nes-text text-[5px] md:text-[6px] text-white/40">STATUS: ACTIVE</span>
                     </div>
                     <p className="story-text text-[9px] md:text-[10px] leading-relaxed md:leading-[2] text-[#fff]">
-                        I AM CURRENTLY A 3RD-YEAR UNDERGRADUATE STUDENT PURSUING A BACHELOR OF SCIENCE IN COMPUTER SCIENCE AND ENGINEERING AT SHAHJALAL UNIVERSITY OF SCIENCE AND TECHNOLOGY (SUST), BANGLADESH. MY ACADEMIC FOUNDATION IS BUILT ON A RIGOROUS STUDY OF <span className="text-nes-yellow font-bold">DATA STRUCTURES (DSA)</span>, <span className="text-nes-yellow font-bold">ALGORITHMS</span>, AND <span className="text-nes-yellow font-bold">OBJECT-ORIENTED PROGRAMMING (OOP)</span> PRINCIPLES.
-                        BEYOND THE CORE CURRICULUM, I HAVE EXTENSIVE EXPERIENCE IN DEVELOPING MODERN APPLICATIONS USING VARIOUS <span className="text-nes-yellow font-bold">WEB TECHNOLOGIES</span> AND AM ACTIVELY INTEGRATING <span className="text-nes-yellow font-bold">DATA SCIENCE</span> METHODOLOGIES INTO MY WORKFLOW. MY PROFESSIONAL FOCUS LIES IN LEVERAGING THESE ANALYTICAL TOOLS TO BUILD SCALABLE, DATA-DRIVEN SOLUTIONS WHILE CONTINUOUSLY EVOLVING MY EXPERTISE IN EMERGING COMPUTATIONAL FIELDS.
+                        I am currently a 3rd-year undergraduate student pursuing a Bachelor of Science in Computer Science and Engineering at Shahjalal University of Science and Technology (SUST), Bangladesh. My academic foundation is built on a rigorous study of <span className="text-nes-yellow font-bold">Data Structures (DSA)</span>, <span className="text-nes-yellow font-bold">Algorithms</span>, and <span className="text-nes-yellow font-bold">Object-Oriented Programming (OOP)</span> principles.
+                        Beyond the core curriculum, I have extensive experience in developing modern applications using various <span className="text-nes-yellow font-bold">Web Technologies</span> and am actively integrating <span className="text-nes-yellow font-bold">Data Science</span> methodologies into my workflow. My professional focus lies in leveraging these analytical tools to build scalable, data-driven solutions while continuously evolving my expertise in emerging computational fields.
                     </p>
-                    <p className="story-text text-[7px] md:text-[8px] italic text-nes-yellow font-bold uppercase">
-                        "OBJECTIVE: BRIDGING TRADITIONAL ENGINEERING WITH THE FRONTIERS OF DATA DRIVEN INNOVATION."
+                    <p className="story-text text-[7px] md:text-[8px] italic text-nes-yellow font-bold">
+                        "Objective: Bridging traditional engineering with the frontiers of data driven innovation."
                     </p>
                 </motion.div>
             </div>
@@ -620,10 +680,10 @@ const Skills = () => {
 // --- 3. PROJECTS ---
 const Projects = () => {
     const data = [
-        { name: "STUDY_BUDDY", desc: "ANDROID APPLICATION DESIGNED TO ENHANCE STUDENT PRODUCTIVITY AND ACADEMIC MANAGEMENT.", tag: "KOTLIN", link: "https://github.com/rantidebRoy/StudyBuddy" },
-        { name: "COURSE_MGMT", desc: "JAVA SERVLET-BASED WEB APPLICATION FOR MANAGING ACADEMIC COURSES AND REGISTRATIONS.", tag: "JAVA", link: "https://github.com/rantidebRoy/Course_Management_System" },
-        { name: "BREAK_BRICKS", desc: "CLASSIC ARCADE GAME IMPLEMENTED IN C++, SHOWCASING GAME LOGIC AND GRAPHICS.", tag: "C++", link: "https://github.com/rantidebRoy/BreakBreaker" },
-        { name: "LEARN_MGMT", desc: "ROBUST PLATFORM FOR HANDLING EDUCATIONAL CONTENT AND MONITORING USER PROGRESS.", tag: "REACT", link: "https://github.com/rantidebRoy/LearningManagementSystem" }
+        { name: "STUDY_BUDDY", desc: "Android application designed to enhance student productivity and academic management.", tag: "KOTLIN", link: "https://github.com/rantidebRoy/StudyBuddy" },
+        { name: "COURSE_MGMT", desc: "Java Servlet-based web application for managing academic courses and registrations.", tag: "JAVA", link: "https://github.com/rantidebRoy/Course_Management_System" },
+        { name: "BREAK_BRICKS", desc: "Classic arcade game implemented in C++, showcasing game logic and graphics.", tag: "C++", link: "https://github.com/rantidebRoy/BreakBreaker" },
+        { name: "LEARN_MGMT", desc: "Robust platform for handling educational content and monitoring user progress.", tag: "REACT", link: "https://github.com/rantidebRoy/LearningManagementSystem" }
     ];
 
     return (
@@ -687,19 +747,19 @@ const Education = () => (
 
                     <div className="space-y-10 md:space-y-12">
                         <div className="relative border-l-4 border-nes-yellow pl-6 md:pl-10">
-                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">BACHELOR OF ENGINEERING</h4>
-                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">SUST, CSE</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">CURRENTLY IN 3RD YEAR.</div>
+                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">Bachelor of Engineering</h4>
+                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2">SUST, CSE</p>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose">Currently in 3rd Year.</div>
                         </div>
                         <div className="relative border-l-4 border-white/20 pl-6 md:pl-10">
-                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">HIGHER SECONDARY (HSC)</h4>
-                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">NOTRE DAME COLLEGE</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">RESULT: GPA 5.00</div>
+                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">Higher Secondary (HSC)</h4>
+                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2">Notre Dame College</p>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose">Result: GPA 5.00</div>
                         </div>
                         <div className="relative border-l-4 border-white/20 pl-6 md:pl-10">
-                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">SECONDARY SCHOOL (SSC)</h4>
-                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2 uppercase">JUBILEE HIGH SCHOOL</p>
-                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose uppercase">RESULT: GPA 5.00</div>
+                            <h4 className="nes-text text-[8px] md:text-[10px] text-white">Secondary School (SSC)</h4>
+                            <p className="nes-text text-[6px] md:text-[8px] text-nes-yellow tracking-widest mt-2">Jubilee High School</p>
+                            <div className="story-text text-[8px] md:text-[10px] mt-4 leading-relaxed md:leading-loose">Result: GPA 5.00</div>
                         </div>
                     </div>
                 </motion.div>
@@ -720,10 +780,10 @@ const Research = () => (
 
             <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                 {[
-                    { title: "MACHINE_LEARNING", desc: "DEVELOPING INTELLIGENT SYSTEMS AND PREDICTIVE MODELS.", icon: <Zap size={18} /> },
-                    { title: "IMAGE_PROCESSING", desc: "ANALYZING AND ENHANCING VISUAL DATA STREAMS.", icon: <Search size={18} /> },
-                    { title: "ASTRONOMICAL_DATA", desc: "APPLYING PYTHON TOOLS FOR PROCESSING SPACE DATA.", icon: <Rocket size={18} /> },
-                    { title: "SOFTWARE_ENG", desc: "SCALABLE AND MAINTAINABLE CODE ARCHITECTURES.", icon: <Terminal size={18} /> }
+                    { title: "MACHINE_LEARNING", desc: "Developing intelligent systems and predictive models.", icon: <Zap size={18} /> },
+                    { title: "IMAGE_PROCESSING", desc: "Analyzing and enhancing visual data streams.", icon: <Search size={18} /> },
+                    { title: "ASTRONOMICAL_DATA", desc: "Applying Python tools for processing space data.", icon: <Rocket size={18} /> },
+                    { title: "SOFTWARE_ENG", desc: "Scalable and maintainable code architectures.", icon: <Terminal size={18} /> }
                 ].map((res, idx) => (
                     <motion.div
                         key={idx}
@@ -734,7 +794,7 @@ const Research = () => (
                         <div className="text-nes-yellow mt-1">{res.icon}</div>
                         <div>
                             <h4 className="nes-text text-[8px] md:text-[9px] text-white mb-3 md:mb-4 tracking-[1px]">{res.title}</h4>
-                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose opacity-70 uppercase">{res.desc}</p>
+                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose opacity-70">{res.desc}</p>
                         </div>
                     </motion.div>
                 ))}
@@ -747,9 +807,9 @@ const Research = () => (
 const Achievements = () => {
     const [selectedId, setSelectedId] = useState(null);
     const achievements = [
-        { id: 1, type: "RESEARCH", title: "PUBLISHED_RESEARCH", text: "CO-AUTHORED: 'IMAGE PROCESSING AND ANALYSIS OF MULTIPLE WAVELENGTH ASTRONOMICAL DATA USING PYTHON TOOLS' (OCT 2024).", icon: <Award className="text-nes-yellow" size={28} />, img: "/research_preview.jpg" },
-        { id: 2, type: "HACKATHON", title: "HACKATHON_WIN", text: "ASTROCODE HACKATHON (WINNER – TEAM ASTROMANIAC).", icon: <Trophy className="text-nes-yellow" size={28} />, img: "/hackathon_preview.jpg" },
-        { id: 3, type: "DISCOVERY", title: "ASTEROID_DISCOVERY", text: "PROVISIONAL DISCOVERY OF MAIN BELT ASTEROID BY IASC/NASA.", icon: <Rocket className="text-nes-yellow" size={28} />, img: "/asteroid_preview.jpg" }
+        { id: 1, type: "RESEARCH", title: "PUBLISHED_RESEARCH", text: "Co-authored: 'Image Processing and Analysis of Multiple Wavelength Astronomical Data Using Python Tools' (Oct 2024).", icon: <Award className="text-nes-yellow" size={28} />, img: "/research_preview.jpg" },
+        { id: 2, type: "HACKATHON", title: "HACKATHON_WIN", text: "AstroCode Hackathon (Winner – Team Astromaniac).", icon: <Trophy className="text-nes-yellow" size={28} />, img: "/hackathon_preview.jpg" },
+        { id: 3, type: "DISCOVERY", title: "ASTEROID_DISCOVERY", text: "Provisional Discovery of Main Belt Asteroid by IASC/NASA.", icon: <Rocket className="text-nes-yellow" size={28} />, img: "/asteroid_preview.jpg" }
     ];
 
     return (
@@ -772,8 +832,8 @@ const Achievements = () => {
                         >
                             {item.icon}
                             <h4 className="nes-text text-[8px] md:text-[9px] text-white tracking-[1px] md:tracking-[2px] group-hover:text-nes-yellow">{item.title}</h4>
-                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose uppercase">{item.text}</p>
-                            <span className="mt-auto nes-text text-[6px] text-nes-yellow opacity-50">[CLICK_TO_PREVIEW]</span>
+                            <p className="story-text text-[7px] md:text-[8px] leading-relaxed md:leading-loose">{item.text}</p>
+                            <span className="mt-auto nes-text text-[6px] text-nes-yellow opacity-50">[Click to Preview]</span>
                         </motion.div>
                     ))}
                 </div>
@@ -823,10 +883,10 @@ const Achievements = () => {
 // --- 7. OTHER ACTIVITIES ---
 const Activities = () => {
     const activityLogs = [
-        "FORMER ACADEMIC MEMBER OF BANGLADESH MATHEMATICAL OLYMPIAD",
-        "FORMER GENERAL MEMBER OF NOTRE DAME NATURE STUDY CLUB",
-        "GENERAL MEMBER OF CAM (COPARNICUS ASTRONOMICAL MEMORIAL) SUST",
-        "GENERAL MEMBER OF KIN (CHARITY ORGANIZATION)"
+        "Former Academic Member of Bangladesh Mathematical Olympiad",
+        "Former General Member of Notre Dame Nature Study Club",
+        "General Member of CAM (Copernicus Astronomical Memorial) SUST",
+        "General Member of KIN (Charity Organization)"
     ];
 
     return (
@@ -853,7 +913,7 @@ const Activities = () => {
                             {activityLogs.map((log, i) => (
                                 <div key={i} className="flex gap-4 md:gap-6 items-start group">
                                     <div className="nes-text text-[8px] md:text-[10px] text-nes-yellow mt-1">{">>"}</div>
-                                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-loose uppercase tracking-tighter group-hover:text-nes-yellow transition-colors">{log}</p>
+                                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-loose tracking-tighter group-hover:text-nes-yellow transition-colors">{log}</p>
                                 </div>
                             ))}
                         </div>
@@ -865,59 +925,166 @@ const Activities = () => {
 };
 
 // --- 8. CONTACT ---
-const Contact = () => (
-    <section id="contact" className="py-24 md:py-40">
-        <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
-            <div className="mb-16 md:mb-20 text-center">
-                <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
-                    CHAPTER_08::UPLINK
-                </h2>
-            </div>
+const Contact = () => {
+    const [status, setStatus] = useState('idle'); // idle, sending, success
 
-            <div className="grid md:grid-cols-2 gap-12 md:gap-16 text-left">
-                <div className="nes-border p-8 md:p-14 bg-black space-y-10 md:space-y-12 shadow-pixel border-nes-yellow">
-                    <div className="space-y-6 md:space-y-8">
-                        <div className="space-y-4 md:space-y-6">
-                            <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">OPERATOR_ID</label>
-                            <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="GUEST_NAME?" />
-                        </div>
-                        <div className="space-y-4 md:space-y-6">
-                            <label className="block nes-text text-[6px] md:text-[8px] text-white/40 tracking-[1px] md:tracking-[2px]">UPLINK_FREQ</label>
-                            <input className="w-full bg-transparent border-b-2 border-white/10 py-3 md:py-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text" placeholder="EMAIL@VOID.NET" />
-                        </div>
-                    </div>
-                    <button className="nes-btn w-full mt-6 md:mt-10 text-[7px] md:text-[8px] font-bold py-4">TRANSMIT_DATA</button>
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (status !== 'idle') return;
+
+        playMenuClick();
+        setStatus('sending');
+
+        // Mock transmission delay
+        setTimeout(() => {
+            setStatus('success');
+            // Reset to idle after 5 seconds
+            setTimeout(() => setStatus('idle'), 5000);
+        }, 2200);
+    };
+
+    return (
+        <section id="contact" className="py-24 md:py-40">
+            <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
+                <div className="mb-16 md:mb-20 text-center">
+                    <h2 className="text-[12px] md:text-2xl font-bold tracking-tight md:tracking-[10px] inline-block border-b-6 border-nes-yellow pb-4 nes-text uppercase text-nes-yellow">
+                        CHAPTER_08::UPLINK
+                    </h2>
                 </div>
 
-                <div className="flex flex-col justify-center gap-10 md:gap-12 lg:pl-10">
-                    <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-[2] text-white border-l-4 border-nes-yellow pl-6 md:pl-10 italic mb-6 md:mb-10 uppercase">
-                        "SIGNAL IF YOU WANT TO COLLABORATE ON THE NEXT GREAT UPGRADE."
-                    </p>
-                    <div className="space-y-8 md:space-y-12">
-                        <div className="flex items-center gap-6 md:gap-8 group">
-                            <div className="p-3 md:p-4 border-4 border-nes-yellow text-nes-yellow transition-all group-hover:bg-nes-yellow group-hover:text-black bg-black">
-                                <Mail size={20} />
-                            </div>
-                            <div>
-                                <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">RADIO_ID</h4>
-                                <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight">rrantideb@gmail.com</p>
+                <div className="grid md:grid-cols-2 gap-12 md:gap-16 text-left">
+                    <motion.div
+                        initial={{ opacity: 0, x: -30 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        className="nes-border p-8 md:p-12 bg-black/80 flex flex-col gap-8 md:gap-10 shadow-pixel border-nes-yellow relative overflow-hidden group"
+                    >
+                        {/* Terminal Header */}
+                        <div className="absolute top-0 left-0 right-0 bg-nes-yellow/10 border-b-2 border-nes-yellow/20 px-4 py-2 flex justify-between items-center z-20">
+                            <span className="nes-text text-[5px] md:text-[6px] text-nes-yellow tracking-widest uppercase font-bold">
+                                {status === 'success' ? 'TRANSMISSION_COMPLETE' : 'SIGNAL_TRANSMITTER_V2.0'}
+                            </span>
+                            <div className="flex gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full ${status === 'success' ? 'bg-green-500' : 'bg-nes-yellow animate-pulse'}`} />
+                                <div className="w-1.5 h-1.5 bg-red-600 rounded-full" />
                             </div>
                         </div>
-                        <div className="flex items-center gap-6 md:gap-8 group">
-                            <div className="p-3 md:p-4 border-4 border-white text-white transition-all group-hover:bg-white group-hover:text-black bg-black">
-                                <Linkedin size={20} />
+
+                        {/* Success Overlay */}
+                        <AnimatePresence>
+                            {status === 'success' && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-black/95 z-10 flex flex-col items-center justify-center p-10 text-center"
+                                >
+                                    <div className="nes-text text-green-500 text-[10px] md:text-[12px] space-y-6">
+                                        <p className="animate-pulse">SIGNAL_RECEIVED_SUCCESSFULLY</p>
+                                        <div className="w-full h-1 bg-green-900 overflow-hidden relative">
+                                            <motion.div
+                                                className="absolute inset-0 bg-green-500"
+                                                initial={{ x: '-100%' }}
+                                                animate={{ x: '100%' }}
+                                                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                                            />
+                                        </div>
+                                        <p className="text-[6px] md:text-[8px] text-white/50 pt-4 uppercase tracking-widest">
+                                            Packet delivery confirmed by main_core.<br />Returning to standby...
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <div className="pt-8 space-y-8 md:space-y-10">
+                            <div className="space-y-4">
+                                <label className="flex items-center gap-3 nes-text text-[6px] md:text-[8px] text-white/50 uppercase">
+                                    <span className="text-nes-yellow font-bold">&gt;</span> OPERATOR_ID
+                                </label>
+                                <input
+                                    disabled={status !== 'idle'}
+                                    className="w-full bg-nes-gray/10 border-2 border-white/10 p-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text transition-colors placeholder:text-white/10 disabled:opacity-20"
+                                    placeholder="IDENT_NAME"
+                                />
                             </div>
-                            <div>
-                                <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">NEURAL_BRIDGE</h4>
-                                <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight uppercase">RANTIDEB-ROY</p>
+
+                            <div className="space-y-4">
+                                <label className="flex items-center gap-3 nes-text text-[6px] md:text-[8px] text-white/50 uppercase">
+                                    <span className="text-nes-yellow font-bold">&gt;</span> UPLINK_FREQ
+                                </label>
+                                <input
+                                    disabled={status !== 'idle'}
+                                    className="w-full bg-nes-gray/10 border-2 border-white/10 p-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text transition-colors placeholder:text-email@void.net disabled:opacity-20"
+                                    placeholder="EMAIL_ADDRESS"
+                                />
                             </div>
+
+                            <div className="space-y-4">
+                                <label className="flex items-center gap-3 nes-text text-[6px] md:text-[8px] text-white/50 uppercase">
+                                    <span className="text-nes-yellow font-bold">&gt;</span> MESSAGE_PACKET
+                                </label>
+                                <textarea
+                                    disabled={status !== 'idle'}
+                                    rows="4"
+                                    className="w-full bg-nes-gray/10 border-2 border-white/10 p-4 text-[8px] md:text-[10px] outline-none focus:border-nes-yellow text-nes-yellow nes-text transition-colors placeholder:text-white/10 resize-none disabled:opacity-20"
+                                    placeholder="ENTER_TRANSMISSION..."
+                                />
+                            </div>
+                        </div>
+
+                        <motion.button
+                            whileHover={status === 'idle' ? { scale: 1.02, backgroundColor: '#f3ef00', color: '#000' } : {}}
+                            whileTap={status === 'idle' ? { scale: 0.98 } : {}}
+                            className={`nes-btn w-full mt-4 text-[8px] font-bold py-5 tracking-[4px] border-4 uppercase ${status === 'sending' ? 'bg-nes-yellow text-black' : 'is-primary'}`}
+                            onClick={handleSubmit}
+                            disabled={status !== 'idle'}
+                        >
+                            {status === 'idle' && 'TRANSMIT_DATA'}
+                            {status === 'sending' && 'SENDING_PACKET...'}
+                            {status === 'success' && 'SIGNAL_SENT'}
+                        </motion.button>
+                    </motion.div>
+
+                    <div className="flex flex-col justify-center gap-10 md:gap-12 lg:pl-10">
+                        <p className="story-text text-[8px] md:text-[10px] leading-relaxed md:leading-[2] text-white border-l-4 border-nes-yellow pl-6 md:pl-10 italic mb-6 md:mb-10">
+                            "Signal if you want to collaborate on the next great upgrade."
+                        </p>
+                        <div className="space-y-8 md:space-y-12">
+                            <a href="mailto:rrantideb@gmail.com" className="flex items-center gap-6 md:gap-8 group pointer-events-auto">
+                                <div className="p-3 md:p-4 border-4 border-nes-yellow text-nes-yellow transition-all group-hover:bg-nes-yellow group-hover:text-black bg-black">
+                                    <Mail size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">RADIO_ID</h4>
+                                    <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight" style={{ textTransform: 'none' }}>rrantideb@gmail.com</p>
+                                </div>
+                            </a>
+                            <a href="https://linkedin.com/in/rantideb-roy" target="_blank" rel="noopener noreferrer" className="flex items-center gap-6 md:gap-8 group pointer-events-auto">
+                                <div className="p-3 md:p-4 border-4 border-white text-white transition-all group-hover:bg-nes-white group-hover:text-black bg-black">
+                                    <Linkedin size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">NEURAL_BRIDGE</h4>
+                                    <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight" style={{ textTransform: 'none' }}>linkedin.com/in/rantideb-roy</p>
+                                </div>
+                            </a>
+                            <a href="https://wa.me/8801601018048" target="_blank" rel="noopener noreferrer" className="flex items-center gap-6 md:gap-8 group pointer-events-auto">
+                                <div className="p-3 md:p-4 border-4 border-white text-white transition-all group-hover:bg-[#25D366] group-hover:border-[#25D366] group-hover:text-black bg-black">
+                                    <MessageSquare size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="nes-text text-[6px] md:text-[8px] text-white/40 mb-2 md:mb-3 uppercase tracking-widest">DIRECT_UPLINK</h4>
+                                    <p className="nes-text text-[7px] md:text-[8px] font-bold text-white tracking-tight" style={{ textTransform: 'none' }}>+88 01601018048</p>
+                                </div>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 // --- Footer ---
 const Footer = () => (
@@ -947,13 +1114,17 @@ function App() {
     const [isHeroDone, setIsHeroDone] = useState(false);
 
     const handleStart = () => {
-        unlockAudio(); // AudioContext created + resumed inside this click handler
+        unlockAudio();
+        // Ensure sound plays by waiting for the context to unlock/resume
+        audioUnlocked.then(() => {
+            playStartSound();
+        });
         setStarted(true);
     };
 
     return (
-        <div className="min-h-screen bg-black selection:bg-nes-yellow selection:text-black overflow-x-hidden relative text-white">
-            {/* Always visible: starfield background */}
+        <div className="min-h-screen selection:bg-nes-yellow selection:text-black overflow-x-hidden relative text-white">
+            {/* Always visible: starfield background (which provides the black base) */}
             <RetroSpace />
 
             {/* Bot: shows intro prompt before start, helper after */}
