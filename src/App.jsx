@@ -50,45 +50,8 @@ function App() {
                 <AsteroidField onScore={handleScore} />
             </div>
 
-            {/* Score HUD — top-right corner */}
-            <div
-                style={{
-                    position: 'fixed',
-                    top: '82px',
-                    right: '20px',
-                    zIndex: 150,
-                    pointerEvents: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    gap: '2px',
-                    padding: '6px 12px',
-                    background: 'rgba(0,0,0,0.80)',
-                    border: '2px solid',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                    borderColor: scoreFlash ? '#f3ef00' : 'rgba(243,239,0,0.28)',
-                    boxShadow: scoreFlash ? '0 0 10px rgba(243,239,0,0.4)' : 'none',
-                }}
-            >
-                <span style={{
-                    fontFamily: '"Press Start 2P", monospace',
-                    fontSize: '7px',
-                    color: 'rgba(255,255,255,0.4)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '2px',
-                }}>☄ ROCKS_DESTROYED:</span>
-                <span style={{
-                    fontFamily: '"Press Start 2P", monospace',
-                    fontSize: '9px',
-                    color: scoreFlash ? '#f3ef00' : 'rgba(243,239,0,0.8)',
-                    transition: 'color 0.2s',
-                    minWidth: '36px',
-                    textAlign: 'right',
-                }}>{asteroidScore}</span>
-            </div>
-
             {/* Bot: shows intro prompt before start, helper after */}
-            <AssistantRobot started={started} onStart={handleStart} />
+            <AssistantRobot started={started} onStart={handleStart} score={asteroidScore} scoreFlash={scoreFlash} />
 
             {/* Main site content — only mounts after user starts */}
             <AnimatePresence>

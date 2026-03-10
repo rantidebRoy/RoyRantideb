@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playMenuClick } from '../audio';
 
-const AssistantRobot = ({ started, onStart }) => {
+const AssistantRobot = ({ started, onStart, score = 0, scoreFlash = false }) => {
     const [message, setMessage] = useState(null);
     const [bubbleVisible, setBubbleVisible] = useState(true);
 
@@ -26,6 +26,7 @@ const AssistantRobot = ({ started, onStart }) => {
             else if (progress < 0.94) setMessage("Stage_07: Extracurricular Logs...");
             else setMessage("Stage_08: Establishing Signal...");
         };
+        handleScroll();
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, [started]);
@@ -110,9 +111,20 @@ const AssistantRobot = ({ started, onStart }) => {
                                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                                className="speech-bubble mb-6 md:mb-10 text-[7px] md:text-[8px] pointer-events-auto"
+                                className="speech-bubble mb-6 md:mb-10 text-[7px] md:text-[8px] pointer-events-auto flex flex-col gap-1"
                             >
-                                {message || 'UNIT_RR-BOT_ONLINE. READING_BIO_DATA...'}
+                                <span>{message || 'UNIT_RR-BOT_ONLINE. READING_BIO_DATA...'}</span>
+                                <span
+                                    style={{
+                                        color: scoreFlash ? '#000000ff' : 'rgba(9, 9, 9, 0.65)',
+                                        transition: 'color 0.2s',
+                                        fontSize: '6px',
+                                        letterSpacing: '1px',
+                                        marginTop: '4px',
+                                    }}
+                                >
+                                    ☄ ROCKS: {score}
+                                </span>
                             </motion.div>
                         )}
                     </AnimatePresence>
