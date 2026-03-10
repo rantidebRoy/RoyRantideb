@@ -6,11 +6,9 @@ const Footer = () => (
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10 md:gap-12 text-center md:text-left">
             <div className="space-y-4 md:space-y-6">
                 <p className="nes-text text-[6px] md:text-[8px] text-white tracking-[2px] md:tracking-[6px] leading-loose">
-                    © 2026 RANTIDEB ROY // POWERED_BY_NES_ENGINE.V6
+                    © 2026 RANTIDEB ROY (ALL_RIGHTS_RESERVED)
                 </p>
-                <p className="nes-text text-[5px] md:text-[6px] text-white/30 tracking-widest uppercase">
-                    S.U.S.T_ENGINEERING_CORE // ALL_RIGHTS_RESERVED
-                </p>
+
             </div>
             <div className="flex gap-8 md:gap-12 items-center">
                 <div className="nes-text text-[6px] md:text-[8px] text-nes-yellow animate-flicker">GAME_STATE: STABLE</div>
