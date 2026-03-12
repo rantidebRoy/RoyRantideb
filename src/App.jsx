@@ -45,8 +45,8 @@ function App() {
             {/* Always visible: starfield background */}
             <RetroSpace />
 
-            {/* Asteroid mini-game layer — always active */}
-            <div style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+            {/* Asteroid mini-game layer — always active and clickable on top of content */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
                 <AsteroidField onScore={handleScore} />
             </div>
 

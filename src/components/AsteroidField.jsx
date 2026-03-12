@@ -138,13 +138,16 @@ const AsteroidField = ({ onScore }) => {
                 return (
                     <div
                         key={a.id}
-                        onClick={(e) => handleAsteroidClick(e, a)}
+                        onMouseDown={(e) => handleAsteroidClick(e, a)}
                         style={{
                             position: 'fixed',
                             left: `${a.x}vw`,
                             top: `${a.y}vh`,
-                            width: s,
-                            height: s,
+                            width: s + 24, // increased hit area
+                            height: s + 24, // increased hit area
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             transform: `translate(-50%, -50%) rotate(${a.rot}deg)`,
                             opacity: a.opacity,
                             cursor: 'crosshair',
