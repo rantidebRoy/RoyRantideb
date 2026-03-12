@@ -59,6 +59,7 @@ function App() {
                     <motion.div
                         key="site"
                         className="crt flicker"
+                        style={{ position: 'relative', zIndex: 10 }}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.8 }}

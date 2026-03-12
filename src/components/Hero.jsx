@@ -15,7 +15,6 @@ const Hero = ({ started, onDone }) => {
 
     useEffect(() => {
         if (titleTyping.done && onDone) {
-            // Minimal delay — just enough for the bio box to mount before sections slide in
             const timer = setTimeout(onDone, 80);
             return () => clearTimeout(timer);
         }
@@ -31,6 +30,8 @@ const Hero = ({ started, onDone }) => {
     return (
         <section className="min-h-screen flex items-center pt-28 pb-16 md:pt-32 md:pb-24 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 md:px-10 flex flex-col lg:grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+
+                {/* ── Left: Text Content ── */}
                 <motion.div
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -80,22 +81,24 @@ const Hero = ({ started, onDone }) => {
                     </AnimatePresence>
                 </motion.div>
 
+                {/* ── Right: Profile Image ── */}
                 <div className="lg:col-span-4 flex justify-center order-1 lg:order-2 w-full">
                     <AnimatePresence>
                         {titleTyping.done && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-nes-gray/20 flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel"
+                                className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 border-8 border-nes-white bg-black flex flex-col items-center justify-center p-2 overflow-hidden shadow-pixel"
+                                style={{ zIndex: 20, position: 'relative' }}
                             >
                                 <div className="absolute top-2 left-2 z-10 text-[5px] md:text-[6px] nes-text text-white bg-black/50 px-1">UNIT_ID: RR_EXT</div>
                                 <div className="absolute bottom-2 right-2 z-10 text-[5px] md:text-[6px] nes-text text-nes-yellow bg-black/50 px-1">VERSION: 4.0</div>
 
-                                <div className="w-full h-full relative group">
+                                <div className="w-full h-full relative">
                                     <img
                                         src="/profile.jpg"
                                         alt="IDENTITY_SCAN"
-                                        className="w-full h-full object-cover grayscale brightness-75 contrast-125 pixelated"
+                                        className="w-full h-full object-cover contrast-125 pixelated"
                                         onError={(e) => {
                                             e.target.style.display = 'none';
                                             e.target.nextSibling.style.display = 'flex';
@@ -113,6 +116,7 @@ const Hero = ({ started, onDone }) => {
                         )}
                     </AnimatePresence>
                 </div>
+
             </div>
         </section>
     );
